@@ -1,0 +1,234 @@
+./MC_CP2
+P2
+____________________________________
+Reading the inputfile: input.inp
+____________________________________
+Nsites = 48
+SavingMicroscopicStates = 1
+NoOfMicroscopicStates = 2
+TotalNumberOfSites = 48
+MaxMCsweeps = 4000
+RandomSeed = 3
+Boltzman_constant = 1
+Metropolis_Algo = 1
+Metropolis used
+Cooling = 2
+Temperature_Values = 46 5.0 2.0 1.0 0.8 0.6 0.5 0.4 0.38 0.36 0.34 0.32 0.3 0.28 0.26 0.24 0.22 0.2 0.18 0.15 0.14 0.13 0.12 0.11 0.1 0.09 0.08 0.07 0.06 0.05 0.04 0.03 0.025 0.02 0.018 0.016 0.014 0.012 0.01 0.008 0.007 0.005 0.003 0.002 0.001 0.0001 0.00001
+Read_Seed_from_file = 0
+Seed_file_name = ThetaPhi_Temp0.0001000000MicroState1_JUND50.0.txt
+Last_n_sweeps_for_measurement = 100
+Measurement_after_each_m_sweeps = 5
+GenericConnectionsFiles = 5 Delta.dat H_L.dat H_Q.dat H_SL.dat H_SQ.dat
+____________________________________
+Temperature = 5 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  5 done
+Temperature, Energy, std(Energy) :               5    -3814.32943     4.53902413
+Temperature = 2 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  2 done
+Temperature, Energy, std(Energy) :               2    -3939.20916      4.1109965
+Temperature = 1 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  1 done
+Temperature, Energy, std(Energy) :               1    -4089.96473     2.91742965
+Temperature = 0.8 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.8 done
+Temperature, Energy, std(Energy) :             0.8     -4197.2874     2.51847399
+Temperature = 0.6 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.6 done
+Temperature, Energy, std(Energy) :             0.6    -4305.87456     2.15350117
+Temperature = 0.5 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.5 done
+Temperature, Energy, std(Energy) :             0.5     -4375.0594     1.83256735
+Temperature = 0.4 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.4 done
+Temperature, Energy, std(Energy) :             0.4    -4482.42585      1.7707121
+Temperature = 0.38 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.38 done
+Temperature, Energy, std(Energy) :            0.38    -4486.23075     1.61688032
+Temperature = 0.36 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.36 done
+Temperature, Energy, std(Energy) :            0.36      -4512.182      1.5552994
+Temperature = 0.34 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.34 done
+Temperature, Energy, std(Energy) :            0.34    -4533.62613     1.42916508
+Temperature = 0.32 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.32 done
+Temperature, Energy, std(Energy) :            0.32    -4523.07166     1.38477997
+Temperature = 0.3 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.3 done
+Temperature, Energy, std(Energy) :             0.3    -4580.88555     1.52560148
+Temperature = 0.28 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.28 done
+Temperature, Energy, std(Energy) :            0.28    -4583.13233     1.13903458
+Temperature = 0.26 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.26 done
+Temperature, Energy, std(Energy) :            0.26    -4625.06252    0.873238582
+Temperature = 0.24 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.24 done
+Temperature, Energy, std(Energy) :            0.24    -4642.14032      0.9752077
+Temperature = 0.22 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.22 done
+Temperature, Energy, std(Energy) :            0.22    -4695.86978    0.629770513
+Temperature = 0.2 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.2 done
+Temperature, Energy, std(Energy) :             0.2    -4719.08206    0.728480674
+Temperature = 0.18 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.18 done
+Temperature, Energy, std(Energy) :            0.18    -4746.58422    0.546837122
+Temperature = 0.15 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.15 done
+Temperature, Energy, std(Energy) :            0.15    -4798.73127    0.480411904
+Temperature = 0.14 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.14 done
+Temperature, Energy, std(Energy) :            0.14    -4834.52517    0.346904639
+Temperature = 0.13 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.13 done
+Temperature, Energy, std(Energy) :            0.13    -4849.64786    0.335557927
+Temperature = 0.12 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.12 done
+Temperature, Energy, std(Energy) :            0.12    -4871.64944    0.245650744
+Temperature = 0.11 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.11 done
+Temperature, Energy, std(Energy) :            0.11    -4887.54262    0.180070366
+Temperature = 0.1 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.1 done
+Temperature, Energy, std(Energy) :             0.1    -4906.01924    0.159300839
+Temperature = 0.09 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.09 done
+Temperature, Energy, std(Energy) :            0.09    -4926.31649    0.173488894
+Temperature = 0.08 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.08 done
+Temperature, Energy, std(Energy) :            0.08    -4945.22479     0.12102178
+Temperature = 0.07 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.07 done
+Temperature, Energy, std(Energy) :            0.07    -4975.30662    0.104124462
+Temperature = 0.06 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.06 done
+Temperature, Energy, std(Energy) :            0.06    -4999.34321   0.0810124762
+Temperature = 0.05 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.05 done
+Temperature, Energy, std(Energy) :            0.05    -5028.14199   0.0720934912
+Temperature = 0.04 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.04 done
+Temperature, Energy, std(Energy) :            0.04    -5045.26367   0.0754432975
+Temperature = 0.03 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.03 done
+Temperature, Energy, std(Energy) :            0.03    -5107.87102   0.0492332019
+Temperature = 0.025 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.025 done
+Temperature, Energy, std(Energy) :           0.025     -5117.5639   0.0262379784
+Temperature = 0.02 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.02 done
+Temperature, Energy, std(Energy) :            0.02    -5152.95339  0.00728650898
+Temperature = 0.018 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.018 done
+Temperature, Energy, std(Energy) :           0.018    -5173.56019  0.00589971569
+Temperature = 0.016 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.016 done
+Temperature, Energy, std(Energy) :           0.016    -5159.07008   0.0204238674
+Temperature = 0.014 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.014 done
+Temperature, Energy, std(Energy) :           0.014    -5183.95995  0.00325426618
+Temperature = 0.012 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.012 done
+Temperature, Energy, std(Energy) :           0.012    -5204.07407  0.00617642565
+Temperature = 0.01 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.01 done
+Temperature, Energy, std(Energy) :            0.01    -5221.70398   0.0112158019
+Temperature = 0.008 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.008 done
+Temperature, Energy, std(Energy) :           0.008    -5247.16373  0.00952302869
+Temperature = 0.007 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.007 done
+Temperature, Energy, std(Energy) :           0.007    -5256.20259  0.00380422112
+Temperature = 0.005 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.005 done
+Temperature, Energy, std(Energy) :           0.005    -5280.58612 0.000738772082
+Temperature = 0.003 is being done
+----------Measurement is started----------
+Total 99 configurations used for measurement
+ Temperature =  0.003 done
+Temperature, Energy, std(Energy) :           0.003    -5299.45019 0.000322489166
+Temperature = 0.002 is being done
+----------Measurement is started----------

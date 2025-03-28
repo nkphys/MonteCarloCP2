@@ -1,0 +1,63 @@
+PBC=1
+Perform_ED=1
+Xsite=8
+Ysite=8
+N_Orbs=2
+TwistedBoundaryCond_mx=0
+TwistedBoundaryCond_my=0
+TBC_cellsX=32
+TBC_cellsY=32
+Filling_per_site=1.0
+RandomSeed=3
+Fix_mu=0
+fixed_mu_value=-2.8
+Boltzman_constant=1.0
+
+RandomDisorderSeed=413
+Disorder_Strength=0.0
+J_Hund0=-1.0
+J_Hund1=-1.0
+OnSiteE0=0.0
+OnSiteE1=0.0
+lambda_lattice=0.0
+K=-1.0
+K2pxpy=2.0
+K2pxmy=-0.1
+NnBiquadratic_A=-0.5
+
+Nearest_Neigh_Hopping_X_basis_row0=-1.0 0.5773
+Nearest_Neigh_Hopping_X_basis_row1=0.5773 -0.333
+Nearest_Neigh_Hopping_Y_basis_row0=-1.0 -0.5773
+Nearest_Neigh_Hopping_Y_basis_row1=-0.5773 -0.333
+
+
+SavingMicroscopicStates=1
+NoOfMicroscopicStates=2
+
+Cooling=2
+Temperature_min=0.01
+Temperature_max=0.1
+dTemperature=0.01
+
+Temperature_Values=16 5.0 2.0 1.0 0.8 0.6 0.5 0.4 0.3 0.2 0.15 0.1 0.05 0.01 0.001 0.0001 0.00001
+
+Temperature=0.00001
+
+Metropolis_Algo=1
+MaxMCsweeps=50000
+Last_n_sweeps_for_measurement=10
+Measurement_after_each_m_sweeps=5
+
+Cluster_lx=4
+Cluster_ly=4
+
+Monte_Carlo_variables=1 theta_and_phi
+# theta_and_phi
+
+Read_Seed_from_file=0
+Seed_file_name=ThetaPhi_Temp0.0001000000MicroState1_JUND50.0.txt
+
+
+IgnoreFermions=1
+#4 phi theta moment_size local_density
+
