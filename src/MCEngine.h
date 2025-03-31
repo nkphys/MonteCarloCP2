@@ -34,6 +34,18 @@ public:
     void Calculate_TotalE();
     void TotalE_Average();
 
+    void Push_to_Prob_Distributions(double theta1_, double theta2_, double phi1_, double phi2_, double phi3_);
+    double Lorentzian(double x, double brd);
+
+
+
+    int N_Phi, N_Theta;
+    double d_Phi, d_Theta;
+    Mat_1_doub Distribution_Phi1, Distribution_Phi2, Distribution_Phi3;
+    Mat_1_doub Distribution_Theta1, Distribution_Theta2;
+
+    Mat_1_int AccCount;
+    double WindowSize, AccRatio;
 
     Mat_2_int LocalConnectionSize;
     Mat_3_int LocalConnectionSites;
@@ -66,6 +78,7 @@ public:
 
 void MCEngine::Calculate_TotalE(){
 
+    complex<double> temp_TotalE_=0.0;
     TotalE_=0.0;
 
     string temp_opr_str;
@@ -105,11 +118,20 @@ void MCEngine::Calculate_TotalE(){
             }
             E_conn = E_conn*connection_val;
 
-            assert(E_conn.imag()<0.000001);
 
-            TotalE_ += E_conn.real();
+            temp_TotalE_ += E_conn;
 
         }}
+
+
+
+    if(temp_TotalE_.imag()>0.000001){
+        cout<<"temp_TotalE_.real() : "<<temp_TotalE_.real()<<endl;
+        cout<<"temp_TotalE_.imag() : "<<temp_TotalE_.imag()<<endl;
+        assert(temp_TotalE_.imag()<0.000001);
+    }
+
+    TotalE_ =  temp_TotalE_.real();
 
 
 }
@@ -311,14 +333,80 @@ void MCEngine::Update_Dvecs(){
 }
 
 
+
+
+double MCEngine::Lorentzian(double x, double brd)
+{
+    double temp;
+
+    temp = (1.0 / PI) * ((brd / 2.0) / ((x * x) + ((brd * brd) / 4.0)));
+
+    return temp;
+}
+
+void MCEngine::Push_to_Prob_Distributions(double theta1_, double theta2_, double phi1_, double phi2_, double phi3_){
+    double eta_=0.01;
+
+    for(int theta_no=0;theta_no<Distribution_Theta1.size();theta_no++){
+        Distribution_Theta1[theta_no] +=Lorentzian(theta1_-theta_no*d_Theta, eta_)*(1.0/(Parameters_.IterMax*ns_));
+        Distribution_Theta2[theta_no] +=Lorentzian(theta2_-theta_no*d_Theta, eta_)*(1.0/(Parameters_.IterMax*ns_));
+    }
+
+    for(int phi_no=0;phi_no<Distribution_Phi1.size();phi_no++){
+        Distribution_Phi1[phi_no] +=Lorentzian(phi1_-phi_no*d_Phi, eta_)*(1.0/(Parameters_.IterMax*ns_));
+        Distribution_Phi2[phi_no] +=Lorentzian(phi2_-phi_no*d_Phi, eta_)*(1.0/(Parameters_.IterMax*ns_));
+        Distribution_Phi3[phi_no] +=Lorentzian(phi3_-phi_no*d_Phi, eta_)*(1.0/(Parameters_.IterMax*ns_));
+    }
+
+    //cout<<"theta = "<<theta_<<", phi = "<<phi_<<endl;
+
+}
+
+
 void MCEngine::FieldThrow(int site)
 {
 
+/*
     theta1_[site] = random1();
     theta2_[site] = random1();
     phi1_[site] = 2.0*PI*random1();
     phi2_[site] = 2.0*PI*random1();
     phi3_[site] = 2.0*PI*random1();
+*/
+
+
+    theta1_[site] += WindowSize*( random1() -0.5 );
+    theta2_[site] += WindowSize*( random1() -0.5 );
+    phi1_[site] += 2.0*PI*WindowSize*( random1() -0.5 );
+    phi2_[site] += 2.0*PI*WindowSize*( random1() -0.5 );
+    phi3_[site] += 2.0*PI*WindowSize*( random1() -0.5 );
+
+
+    // theta1_[site] += 2.0*(random1()-0.5);
+    // theta2_[site] += 2.0*(random1()-0.5);
+    // phi1_[site] += 2.0*PI*2.0*(random1()-0.5);
+    // phi2_[site] += 2.0*PI*2.0*(random1()-0.5);
+    // phi3_[site] += 2.0*PI*2.0*(random1()-0.5);
+
+
+    if (phi1_[site] < 0.0){phi1_[site] = 2.0 * PI + phi1_[site];}
+    phi1_[site] = fmod(phi1_[site], 2.0 * PI);
+
+    if (phi2_[site] < 0.0){phi2_[site] =  2.0 * PI + phi2_[site];}
+    phi2_[site] = fmod(phi2_[site], 2.0 * PI);
+
+    if (phi3_[site] < 0.0){phi3_[site] =  2.0 * PI + phi3_[site];}
+    phi3_[site] = fmod(phi3_[site], 2.0 * PI);
+
+
+    if (theta1_[site] < 0.0){theta1_[site] =  1.0 + theta1_[site];}
+    theta1_[site] = fmod(theta1_[site], 1.0);
+
+    if (theta2_[site] < 0.0){theta2_[site] =  1.0 + theta2_[site];}
+    theta2_[site] = fmod(theta2_[site], 1.0);
+
+
+    Push_to_Prob_Distributions(theta1_[site], theta2_[site], phi1_[site], phi2_[site], phi3_[site]);
 
     //	Push_to_Prob_Distributions( etheta[Spin_no](a,b), ephi[Spin_no](a,b) );
 
@@ -353,6 +441,12 @@ complex<double> MCEngine::GetLocalOprExp(string opr_str, int opr_site){
     }
     if(opr_str == "Sy"){
         value = iota_complex*( z_*conj(x_) - x_*conj(z_) );
+    }
+    if(opr_str == "Sp"){
+        value = iota_complex*( y_*conj(z_) - z_*conj(y_) ) - 1.0*( z_*conj(x_) - x_*conj(z_) );
+    }
+    if(opr_str == "Sm"){
+        value = iota_complex*( y_*conj(z_) - z_*conj(y_) ) + 1.0*( z_*conj(x_) - x_*conj(z_) );
     }
     if(opr_str == "iSy"){
         value = -1.0*( z_*conj(x_) - x_*conj(z_) );
@@ -398,7 +492,10 @@ double MCEngine::Get_Local_Energy(int site){
 
     }
 
+    if(E_local.imag()>0.0000001){
+    cout<<"E_local.imag() = "<<E_local.imag()<<endl;
     assert(E_local.imag()<0.0000001);
+    }
 
     return E_local.real();
 }
@@ -408,10 +505,23 @@ void MCEngine::RUN_MC()
 {
 
 
+
+    //Initializing PDF's for Phi and Theta.
+    N_Phi=2000;
+    N_Theta=1000;
+    d_Phi=(2.0*PI)/(1.0*N_Phi);
+    d_Theta=1.0/(1.0*N_Theta);
+    Distribution_Phi1.resize(N_Phi);
+    Distribution_Theta1.resize(N_Theta);
+    Distribution_Phi2.resize(N_Phi);
+    Distribution_Theta2.resize(N_Theta);
+    Distribution_Phi3.resize(N_Phi);
+
     SiSj_.resize(ns_,ns_);SiSj_Mean_.resize(ns_,ns_);SiSj_square_Mean_.resize(ns_,ns_);
     TauZiTauZj_.resize(ns_,ns_);TauZiTauZj_Mean_.resize(ns_,ns_);TauZiTauZj_square_Mean_.resize(ns_,ns_);
 
 
+    AccCount.resize(2);
 
 
     int MC_sweeps_used_for_Avg = Parameters_.Last_n_sweeps_for_measurement;
@@ -426,27 +536,31 @@ void MCEngine::RUN_MC()
 
     //	assert(false);
 
-    bool guess_accepted;
-
     for(int temp_point=0;temp_point<Parameters_.Temp_values.size();temp_point++){
+
+        for(int phi_no=0;phi_no<N_Phi;phi_no++){
+        Distribution_Phi1[phi_no]=0.0;
+        Distribution_Phi2[phi_no]=0.0;
+        Distribution_Phi3[phi_no]=0.0;
+        }
+        for(int theta_no=0;theta_no<N_Theta;theta_no++){
+            Distribution_Theta1[theta_no] =0.0;
+            Distribution_Theta2[theta_no] =0.0;
+        }
+
+
         temp_ = Parameters_.Temp_values[temp_point];
         cout << "Temperature = " << temp_ << " is being done" << endl;
         Parameters_.temp = temp_;
         Parameters_.beta = double( 1.0/(Parameters_.Boltzman_constant*temp_));
 
+        AccCount[0]=0;
+        AccCount[1]=0;
 
         char temp_char[50];
         sprintf(temp_char, "%.10f", temp_);
 
-        Parameters_.WindowSize = 0.1; //2f + 0.003f*beta0;
-        Parameters_.Eav = 0.0;
-        Parameters_.MCNorm = 0;
-        Parameters_.Dflag = 'N'; //N // flag to calculate only Eigenvalue
-        //std::string name="Output/Conf_" + to_string(ltemp) + ".dat";
-        //Parameters_.beta = double(11604.0/ (Parameters_.temp +20.0) );
-        //cout << "TEMP  " << Parameters_.temp << endl;
-
-
+        WindowSize = 0.1;
 
         string File_Out_real_space_corr = "Real_space_corr" + string(temp_char) + ".txt";
         ofstream File_Out_Real_Space_Corr(File_Out_real_space_corr.c_str());
@@ -518,10 +632,12 @@ void MCEngine::RUN_MC()
                 if (Prob_check > ( random1()) )
                 {
                     //PrevE = CurrE;
+                    AccCount[0] +=1;
                 }
                 //REJECTED
                 else
                 {
+                    AccCount[1] +=1;
                     theta1_[i] = saved_Params[theta1_ind];
                     theta2_[i] = saved_Params[theta2_ind];
                     phi1_[i] = saved_Params[phi1_ind];
@@ -560,6 +676,20 @@ void MCEngine::RUN_MC()
             }
 
 
+
+
+            if(count%100 ==0){
+            AccRatio = (1.0*AccCount[0])/((AccCount[0] + AccCount[1])*1.0);
+            WindowSize *= abs(1.0 + 0.1 * (AccRatio - 0.5));
+            if(WindowSize>1){
+                WindowSize=1.0;
+            }
+            }
+            if(count%2000 ==0){
+            cout<<"Acceptance Ratio, WindowSize : "<<AccRatio<<"  "<<WindowSize<<endl;
+            }
+
+
         } // Iter Loop
 
 
@@ -582,11 +712,10 @@ void MCEngine::RUN_MC()
         }
 
 
-
         cout<<" Temperature =  "<<temp_<<" done"<<endl;
 
         double std_E = max(0.0,(((TotalE_square_Mean_ / (Confs_used * 1.0)) - ((TotalE_Mean_ * TotalE_Mean_) / (Confs_used * Confs_used * 1.0)))));
-        cout<<"Temperature, Energy, std(Energy) : "<<setw(15)<<temp_<<setw(15)<<TotalE_Mean_<<setw(15)<<std_E<<endl;
+        cout<<"Temperature, Energy, std(Energy) : "<<setw(15)<<temp_<<setw(15)<<(TotalE_Mean_/Confs_used)<<setw(15)<<std_E<<endl;
 
 
         // string ObsOutFile_str="LocalObsOut_Temperature"+ string(temp_char)+".txt";
@@ -616,6 +745,24 @@ void MCEngine::RUN_MC()
 
 
 
+
+/*
+        string File_Out_PDF_theta1 = "PDF_Theta1_" + string(temp_char) +".txt";
+        ofstream File_Out_PDF_Theta1(File_Out_PDF_theta1.c_str());
+        File_Out_PDF_Theta1<<"# theta_no Theta1_val PDF  for dTheta="<<d_Theta<<endl;
+
+        string File_Out_PDF_phi1 = "PDF_Phi1_" + string(temp_char) +".txt";
+        ofstream File_Out_PDF_Phi1(File_Out_PDF_phi1.c_str());
+        File_Out_PDF_Phi1<<"#phi_no Phi1_val PDF  for dPhi="<<d_Phi<<endl;
+
+        for(int theta_no=0;theta_no<Distribution_Theta1.size();theta_no++){
+            File_Out_PDF_Theta1<<theta_no<<"  "<<theta_no*d_Theta<<"   "<<Distribution_Theta1[theta_no]<<endl;
+        }
+
+        for(int phi_no=0;phi_no<Distribution_Phi1.size();phi_no++){
+            File_Out_PDF_Phi1<<phi_no<<"  "<<phi_no*d_Phi<<"   "<<Distribution_Phi1[phi_no]<<endl;
+        }
+*/
 
     } //Temperature loop
 

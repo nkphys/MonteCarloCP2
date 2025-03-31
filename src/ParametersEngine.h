@@ -130,11 +130,11 @@ void Parameters::Initialize(string inputfile_)
         no_of_temp_points = int( (( temp_max - temp_min )/(d_Temp)) + 1);
         Temp_values.resize(no_of_temp_points);
         for(int point_no=0;point_no<no_of_temp_points;point_no++){
-            Temp_values[point_no] = temp_min + (point_no*(d_Temp));
+            Temp_values[point_no] = temp_max - (point_no*(d_Temp));
         }
 
     }
-    if (cooling_double == 2.0)
+    else if (cooling_double == 2.0)
     {
         Cooling_ = true;
         temp_values_ = matchstring2(inputfile_, "Temperature_Values");
@@ -165,7 +165,7 @@ void Parameters::Initialize(string inputfile_)
     }
     else
     {
-        cout << "ERROR: Cooling can be only 1 (true) or 0 (false)" << endl;
+        cout << "ERROR: Cooling can be only 1 or 2 (true) or 0 (false)" << endl;
         assert(cooling_double == 0.0);
     }
 
