@@ -1,0 +1,4 @@
+rm -f MC_CP2 *.o
+g++  -std=c++11 -Isrc -O3   -c -o main.o main.cpp
+rm -f MC_CP2 *.o
+g++  -std=c++11 -Isrc -O3   -c -o main.o main.cpp

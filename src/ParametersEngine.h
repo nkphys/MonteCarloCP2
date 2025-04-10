@@ -25,6 +25,12 @@ public:
     bool Metropolis_Algorithm;
     bool Heat_Bath_Algorithm;
 
+    bool PTMC; //Parallel Tempering Monte Carlo
+    int N_replica_sets;
+    int N_temperature_slices;
+    int NProcessors;
+    int SwappingSweepGap;
+    Mat_2_doub TemperatureReplicaSets;
 
     /*
 SavingMicroscopicStates=1
@@ -67,6 +73,8 @@ void Parameters::Initialize(string inputfile_)
     cout << "Reading the inputfile: " << inputfile_ << endl;
     cout << "____________________________________" << endl;
 
+
+    NProcessors=int(matchstring(inputfile_,"NProcessors"));
 
     ns = int(matchstring(inputfile_, "Nsites"));
     SavingMicroscopicStates_int = int(matchstring(inputfile_, "SavingMicroscopicStates"));
@@ -148,6 +156,29 @@ void Parameters::Initialize(string inputfile_)
             temp_values_stream >> Temp_values[point_no];
         }
 
+    }
+    else if (cooling_double == 3.0){
+        PTMC = true;
+
+        cout<<"XXXXXXXX Parallel Tempering is used XXXXXXXXXXXX"<<endl;
+
+        string replica_info = matchstring2(inputfile_, "Replica_Info");
+        stringstream replica_info_stream(replica_info);
+
+        replica_info_stream>>N_replica_sets;
+        replica_info_stream>>N_temperature_slices;
+        replica_info_stream>>SwappingSweepGap;
+
+        TemperatureReplicaSets.resize(N_replica_sets);
+
+        string replica_temps = matchstring2(inputfile_, "Replica_Temperatures");
+        stringstream replica_temps_stream(replica_temps);
+        for(int Rset=0;Rset<N_replica_sets;Rset++){
+            TemperatureReplicaSets[Rset].resize(N_temperature_slices);
+            for(int Ti=0;Ti<N_temperature_slices;Ti++){
+                replica_temps_stream>>TemperatureReplicaSets[Rset][Ti];
+            }
+        }
     }
     else if (cooling_double == 0.0)
     {

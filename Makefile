@@ -29,6 +29,7 @@ CPPFLAGS += -Isrc
 #CPPFLAGS += -Wall -Werror -Wextra #### This enables warnings with extra debugging
 #CPPFLAGS += -g3 #### link gdb to file system of program
 CPPFLAGS += -O3 #### Reduce compilation time and make debugging produce the expected results.
+CPPFLAGS += -fopenmp
 STRIP_COMMAND = true #### Keeps lines in the executable for debugging
 
 $(EXENAME): clean main.o 

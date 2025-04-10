@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #define PI acos(-1.0)
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifndef MCENGINE_H
 #define MCENGINE_H
 
@@ -19,7 +23,7 @@ public:
 
 
     void Initialize_MarsagliaParams();
-    void Update_Dvecs();
+   // void Update_Dvecs();
     double random1();
     void Create_Connections_wrt_site();
     void FieldThrow(int site);
@@ -38,6 +42,15 @@ public:
     double Lorentzian(double x, double brd);
 
 
+    void InitializeEngine();
+
+
+    bool PTMC; //Parallel Tempering Monte Carlo
+    int N_replica_sets;
+    int N_temperature_slices;
+    int NProcessors;
+    int SwappingSweepGap;
+    Mat_2_doub TemperatureReplicaSets;
 
     int N_Phi, N_Theta;
     double d_Phi, d_Theta;
@@ -55,15 +68,15 @@ public:
     int theta1_ind, theta2_ind, phi1_ind, phi2_ind, phi3_ind;
     int X_, Y_, Z_;
     Mat_2_Complex_doub Dvecs;
-    Mat_1_doub theta1_, theta2_, phi1_, phi2_, phi3_;
+    Mat_2_doub theta1_, theta2_, phi1_, phi2_, phi3_;
     Parameters &Parameters_;
     mt19937_64 &Generator1_; //for random fields
     const int ns_;
 
 
     double TotalE_, TotalE_Mean_, TotalE_square_Mean_;
-    Matrix<double> SiSj_, SiSj_Mean_, SiSj_square_Mean_;
-    Matrix<double> TauZiTauZj_, TauZiTauZj_Mean_, TauZiTauZj_square_Mean_;
+    vector <Matrix<double>> SiSj_, SiSj_Mean_, SiSj_square_Mean_;
+    vector <Matrix<double>> TauZiTauZj_, TauZiTauZj_Mean_, TauZiTauZj_square_Mean_;
 
     uniform_real_distribution<double> dis1_; //for random fields
 
@@ -75,6 +88,38 @@ public:
  *  ***********
 */
 
+void MCEngine::InitializeEngine(){
+
+    PTMC=Parameters_.PTMC;
+    N_replica_sets=Parameters_.N_replica_sets;
+    N_temperature_slices=Parameters_.N_temperature_slices;
+    NProcessors=Parameters_.NProcessors;
+    SwappingSweepGap=Parameters_.SwappingSweepGap;
+    TemperatureReplicaSets=Parameters_.TemperatureReplicaSets;
+
+    theta1_.resize(N_temperature_slices);theta2_.resize(N_temperature_slices);
+    phi1_.resize(N_temperature_slices);phi2_.resize(N_temperature_slices);phi3_.resize(N_temperature_slices);
+
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
+    theta1_[Ti].resize(ns_);theta2_[Ti].resize(ns_);
+    phi1_[Ti].resize(ns_);phi2_[Ti].resize(ns_);phi3_[Ti].resize(ns_);
+    }
+
+    Initialize_MarsagliaParams();
+
+
+#ifdef _OPENMP
+    double begin_time, end_time;
+    begin_time = omp_get_wtime();
+
+    int N_p = omp_get_max_threads();
+    omp_set_num_threads(no_of_processors);
+
+    cout<<"Max threads which can be used parallely = "<<N_p<<endl;
+    cout<<"No. of threads used parallely = "<<no_of_processors<<endl;
+#endif
+
+}
 
 void MCEngine::Calculate_TotalE(){
 
@@ -286,30 +331,27 @@ void MCEngine::Initialize_MarsagliaParams(){
     phi1_ind=2;phi2_ind=3;phi3_ind=4;
 
 
+    // Dvecs.resize(ns_);
+    // for(int i=0;i<ns_;i++){
+    //     Dvecs[i].resize(3);
+    // }
 
-    Dvecs.resize(ns_);
+
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
     for(int i=0;i<ns_;i++){
-        Dvecs[i].resize(3);
+        theta1_[Ti][i] = random1();
+        theta2_[Ti][i] = random1();
+        phi1_[Ti][i] = 2.0*PI*random1();
+        phi2_[Ti][i] = 2.0*PI*random1();
+        phi3_[Ti][i] = 2.0*PI*random1();
+    }
     }
 
-    theta1_.resize(ns_);theta2_.resize(ns_);
-    phi1_.resize(ns_);phi2_.resize(ns_);phi3_.resize(ns_);
-
-
-    for(int i=0;i<ns_;i++){
-        theta1_[i] = random1();
-        theta2_[i] = random1();
-        phi1_[i] = 2.0*PI*random1();
-        phi2_[i] = 2.0*PI*random1();
-        phi3_[i] = 2.0*PI*random1();
-    }
-
-
-    Update_Dvecs();
-
+   // Update_Dvecs();
 
 }
 
+/*
 void MCEngine::Update_Dvecs(){
 
 
@@ -333,7 +375,7 @@ void MCEngine::Update_Dvecs(){
 }
 
 
-
+*/
 
 double MCEngine::Lorentzian(double x, double brd)
 {
@@ -517,9 +559,14 @@ void MCEngine::RUN_MC()
     Distribution_Theta2.resize(N_Theta);
     Distribution_Phi3.resize(N_Phi);
 
-    SiSj_.resize(ns_,ns_);SiSj_Mean_.resize(ns_,ns_);SiSj_square_Mean_.resize(ns_,ns_);
-    TauZiTauZj_.resize(ns_,ns_);TauZiTauZj_Mean_.resize(ns_,ns_);TauZiTauZj_square_Mean_.resize(ns_,ns_);
 
+    SiSj_.resize(N_temperature_slices);SiSj_Mean_.resize(N_temperature_slices);SiSj_square_Mean_.resize(N_temperature_slices);
+    TauZiTauZj_.resize(N_temperature_slices);TauZiTauZj_Mean_.resize(N_temperature_slices);TauZiTauZj_square_Mean_.resize(N_temperature_slices);
+
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
+    SiSj_[Ti].resize(ns_,ns_);SiSj_Mean_[Ti].resize(ns_,ns_);SiSj_square_Mean_[Ti].resize(ns_,ns_);
+    TauZiTauZj_[Ti].resize(ns_,ns_);TauZiTauZj_Mean_[Ti].resize(ns_,ns_);TauZiTauZj_square_Mean_[Ti].resize(ns_,ns_);
+    }
 
     AccCount.resize(2);
 
@@ -536,8 +583,9 @@ void MCEngine::RUN_MC()
 
     //	assert(false);
 
-    for(int temp_point=0;temp_point<Parameters_.Temp_values.size();temp_point++){
+    for(int temp_set=0;temp_set<N_replica_sets;temp_set++){
 
+        /*
         for(int phi_no=0;phi_no<N_Phi;phi_no++){
         Distribution_Phi1[phi_no]=0.0;
         Distribution_Phi2[phi_no]=0.0;
@@ -547,7 +595,10 @@ void MCEngine::RUN_MC()
             Distribution_Theta1[theta_no] =0.0;
             Distribution_Theta2[theta_no] =0.0;
         }
+*/
 
+
+        for(int Ti=0;Ti<N_temperature_slices;Ti++){
 
         temp_ = Parameters_.Temp_values[temp_point];
         cout << "Temperature = " << temp_ << " is being done" << endl;
@@ -678,14 +729,16 @@ void MCEngine::RUN_MC()
 
 
 
-            if(count%100 ==0){
+            if(count%1 ==0){
             AccRatio = (1.0*AccCount[0])/((AccCount[0] + AccCount[1])*1.0);
             WindowSize *= abs(1.0 + 0.1 * (AccRatio - 0.5));
             if(WindowSize>1){
                 WindowSize=1.0;
             }
+            AccCount[0]=0;
+            AccCount[1]=0;
             }
-            if(count%2000 ==0){
+            if(count%1000 ==0){
             cout<<"Acceptance Ratio, WindowSize : "<<AccRatio<<"  "<<WindowSize<<endl;
             }
 
@@ -718,35 +771,34 @@ void MCEngine::RUN_MC()
         cout<<"Temperature, Energy, std(Energy) : "<<setw(15)<<temp_<<setw(15)<<(TotalE_Mean_/Confs_used)<<setw(15)<<std_E<<endl;
 
 
-        // string ObsOutFile_str="LocalObsOut_Temperature"+ string(temp_char)+".txt";
-        // ofstream ObsOutFile(ObsOutFile_str.c_str());
-        // ObsOutFile<<"#site Sx Sy Sz Sx2 Sy2 Sz2"<<endl;
-        // for(int site=0;site<ns_;site++){
-        //     ObsOutFile<<site<<"  "<<GetLocalOprExp("Sx", site).real()<<"  "<<GetLocalOprExp("Sx", site).imag()<<"  "
-        //                     <<GetLocalOprExp("Sy", site).real()<<"  "<<GetLocalOprExp("Sy", site).imag()<<"  "
-        //                     <<GetLocalOprExp("Sz", site).real()<<"  "<<GetLocalOprExp("Sz", site).imag()<<"  "
-        //                <<GetLocalOprExp("Sx2", site).real()<<"  "<<GetLocalOprExp("Sx2", site).imag()<<"  "
-        //                <<GetLocalOprExp("Sy2", site).real()<<"  "<<GetLocalOprExp("Sy2", site).imag()<<"  "
-        //                <<GetLocalOprExp("Sz2", site).real()<<"  "<<GetLocalOprExp("Sz2", site).imag()<<"  "
-        //                <<endl;
-        // }
+        /*
+        string ObsOutFile_str="LocalObsOut_Temperature"+ string(temp_char)+".txt";
+        ofstream ObsOutFile(ObsOutFile_str.c_str());
+        ObsOutFile<<"#site Sx Sy Sz Sx2 Sy2 Sz2"<<endl;
+        for(int site=0;site<ns_;site++){
+            ObsOutFile<<site<<"  "<<GetLocalOprExp("Sx", site).real()<<"  "<<GetLocalOprExp("Sx", site).imag()<<"  "
+                            <<GetLocalOprExp("Sy", site).real()<<"  "<<GetLocalOprExp("Sy", site).imag()<<"  "
+                            <<GetLocalOprExp("Sz", site).real()<<"  "<<GetLocalOprExp("Sz", site).imag()<<"  "
+                       <<GetLocalOprExp("Sx2", site).real()<<"  "<<GetLocalOprExp("Sx2", site).imag()<<"  "
+                       <<GetLocalOprExp("Sy2", site).real()<<"  "<<GetLocalOprExp("Sy2", site).imag()<<"  "
+                       <<GetLocalOprExp("Sz2", site).real()<<"  "<<GetLocalOprExp("Sz2", site).imag()<<"  "
+                       <<endl;
+        }
 
-        // string ObsOutFile2_str="CorrOut_Temperature"+ string(temp_char)+".txt";
-        // ofstream ObsOutFile2(ObsOutFile2_str.c_str());
-        // ObsOutFile2<<"#site   S.S(0,site)   TauZTauZ(N/2,site)"<<endl;
-        // for(int site=0;site<ns_;site++){
-        //     double SS =  GetLocalOprExp("Sx", 0).real()*GetLocalOprExp("Sx", site).real()
-        //                + GetLocalOprExp("Sy", 0).real()*GetLocalOprExp("Sy", site).real()
-        //                 + GetLocalOprExp("Sz", 0).real()*GetLocalOprExp("Sz", site).real();
-        //     double TzTz = 0.25*( GetLocalOprExp("Sx2", ns_/2).real() - GetLocalOprExp("Sy2", ns_/2).real() )*
-        //                   ( GetLocalOprExp("Sx2", site).real() - GetLocalOprExp("Sy2", site).real() );
-        //     ObsOutFile2<<site<<"  "<<SS<<"  "<<TzTz<<endl;
-        // }
+        string ObsOutFile2_str="CorrOut_Temperature"+ string(temp_char)+".txt";
+        ofstream ObsOutFile2(ObsOutFile2_str.c_str());
+        ObsOutFile2<<"#site   S.S(0,site)   TauZTauZ(N/2,site)"<<endl;
+        for(int site=0;site<ns_;site++){
+            double SS =  GetLocalOprExp("Sx", 0).real()*GetLocalOprExp("Sx", site).real()
+                       + GetLocalOprExp("Sy", 0).real()*GetLocalOprExp("Sy", site).real()
+                        + GetLocalOprExp("Sz", 0).real()*GetLocalOprExp("Sz", site).real();
+            double TzTz = 0.25*( GetLocalOprExp("Sx2", ns_/2).real() - GetLocalOprExp("Sy2", ns_/2).real() )*
+                          ( GetLocalOprExp("Sx2", site).real() - GetLocalOprExp("Sy2", site).real() );
+            ObsOutFile2<<site<<"  "<<SS<<"  "<<TzTz<<endl;
+        }
+        */
 
-
-
-
-/*
+        /*
         string File_Out_PDF_theta1 = "PDF_Theta1_" + string(temp_char) +".txt";
         ofstream File_Out_PDF_Theta1(File_Out_PDF_theta1.c_str());
         File_Out_PDF_Theta1<<"# theta_no Theta1_val PDF  for dTheta="<<d_Theta<<endl;
@@ -762,9 +814,13 @@ void MCEngine::RUN_MC()
         for(int phi_no=0;phi_no<Distribution_Phi1.size();phi_no++){
             File_Out_PDF_Phi1<<phi_no<<"  "<<phi_no*d_Phi<<"   "<<Distribution_Phi1[phi_no]<<endl;
         }
-*/
+        */
 
-    } //Temperature loop
+
+
+    }
+
+    } //Temperature Set
 
 } // ---------
 

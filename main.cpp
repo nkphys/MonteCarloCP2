@@ -11,14 +11,17 @@
 #include <cmath>
 #include <cassert>
 using namespace std;
-#include "Matrix.h"
-#include "ParametersEngine.h"
+#include "src/Matrix.h"
+#include "src/ParametersEngine.h"
 //#include "MFParams.h"
 //#include "Hamiltonian.h"
 //#include "Observables.h"
-#include "MCEngine.h"
+#include "src/PTMCEngine.h"
 #include "random"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 int main(int argc, char *argv[]) {
     if (argc<2) { throw std::invalid_argument("USE:: executable inputfile"); }
@@ -31,8 +34,24 @@ int main(int argc, char *argv[]) {
 
     string inputfile = argv[1];
 
+
+
     Parameters Parameters_;
     Parameters_.Initialize(inputfile);
+
+
+
+#ifdef _OPENMP
+    double begin_time, end_time;
+    begin_time = omp_get_wtime();
+
+    int N_p = omp_get_max_threads();
+    omp_set_num_threads(Parameters_.NProcessors);
+
+    cout<<"Max threads which can be used parallely = "<<N_p<<endl;
+    cout<<"No. of threads used parallely = "<<Parameters_.NProcessors<<endl;
+#endif
+
 
     mt19937_64 Generator_(Parameters_.RandomSeed); //for random fields
 
@@ -55,12 +74,13 @@ int main(int argc, char *argv[]) {
     if (ex_string=="P2"){
 
      cout<<setprecision(9);
-     MCEngine MCEngine_(Parameters_, Generator_);
+     PTMCEngine MCEngine_(Parameters_, Generator_);
 
      //assert(false);
 
      MCEngine_.Create_Connections_wrt_site();
-     MCEngine_.Initialize_MarsagliaParams();
+     MCEngine_.InitializeEngine();
+
      MCEngine_.RUN_MC();      // Monte-Carlo Engine
 
     }
