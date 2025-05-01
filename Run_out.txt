@@ -8,7 +8,7 @@ Nsites = 32
 SavingMicroscopicStates = 1
 NoOfMicroscopicStates = 2
 TotalNumberOfSites = 32
-MaxMCsweeps = 12000
+MaxMCsweeps = 30000
 RandomSeed = 3
 Boltzman_constant = 1
 Metropolis_Algo = 1
@@ -16,20 +16,54 @@ Metropolis used
 Cooling = 3
 XXXXXXXX Parallel Tempering is used XXXXXXXXXXXX
 Replica_Info = 1 1 50
-Replica_Temperatures = 0.001
+Replica_Temperatures = 0.0000001
 Read_Seed_from_file = 0
 Seed_file_name = ThetaPhi_Temp0.0001000000MicroState1_JUND50.0.txt
-Last_n_sweeps_for_measurement = 1200
+Last_n_sweeps_for_measurement = 3000
 Measurement_after_each_m_sweeps = 5
 GenericConnectionsFiles = 5 Delta.dat H_L.dat H_Q.dat H_SL.dat H_SQ.dat
 ____________________________________
 Max threads which can be used parallely = 8
 No. of threads used parallely = 4
-0 : 0.001  -26.3963954
-1000 : 0.001  -35.8776504
-2000 : 0.001  -36.1579654
-3000 : 0.001  -36.1634932
-4000 : 0.001  -36.1701989
+0 : 1e-07  -27.5691134
+1000 : 1e-07  -36.1497053
+2000 : 1e-07  -36.1990712
+3000 : 1e-07  -36.2086554
+4000 : 1e-07  -36.2113563
+5000 : 1e-07  -36.2117916
+6000 : 1e-07  -36.2161667
+7000 : 1e-07  -36.2187987
+8000 : 1e-07  -36.2194674
+9000 : 1e-07  -36.2194876
+10000 : 1e-07  -36.2214851
+11000 : 1e-07  -36.2219245
+12000 : 1e-07  -36.2224337
 ----------Measurement is started----------
-5000 : 0.001  -36.1710637
-6000 : 0.001  -36.1685451
+13000 : 1e-07  -36.2227233
+14000 : 1e-07  -36.2229425
+15000 : 1e-07  -36.2235601
+500 : Temperature, Energy, std(Energy) :           1e-07     -36.222823 8.78562787e-08
+500 : Temperature, Cv :          1e-07     8785627.87
+16000 : 1e-07  -36.224878
+17000 : 1e-07  -36.2249273
+18000 : 1e-07  -36.2249273
+1000 : Temperature, Energy, std(Energy) :           1e-07    -36.2237227 9.88420197e-07
+1000 : Temperature, Cv :          1e-07     98842019.7
+19000 : 1e-07  -36.2249273
+20000 : 1e-07  -36.2252345
+21000 : 1e-07  -36.2252345
+1500 : Temperature, Energy, std(Energy) :           1e-07    -36.2241902 1.10325868e-06
+1500 : Temperature, Cv :          1e-07      110325868
+22000 : 1e-07  -36.2257119
+23000 : 1e-07  -36.2257693
+24000 : 1e-07  -36.2257693
+2000 : Temperature, Energy, std(Energy) :           1e-07    -36.2245727 1.26836289e-06
+2000 : Temperature, Cv :          1e-07      126836289
+25000 : 1e-07  -36.2257693
+26000 : 1e-07  -36.2258222
+27000 : 1e-07  -36.225845
+2500 : Temperature, Energy, std(Energy) :           1e-07    -36.2248181 1.25566748e-06
+2500 : Temperature, Cv :          1e-07      125566748
+28000 : 1e-07  -36.2258542
+29000 : 1e-07  -36.2259055
+--------THE END--------

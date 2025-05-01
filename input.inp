@@ -1,8 +1,11 @@
 Nsites=32
-RandomSeed=3
+RandomSeed=6
 Boltzman_constant=1.0
 
-GenericConnectionsFiles=5 Delta.dat H_L.dat H_Q.dat H_SL.dat H_SQ.dat
+
+File_SiteTags=SiteTags.dat
+GenericConnectionsFiles=4 H_SS_TT.dat H_SS_T.dat H_SS.dat H_TT.dat 
+#5 Delta.dat H_L.dat H_Q.dat H_SL.dat H_SQ.dat
 
 SavingMicroscopicStates=1
 NoOfMicroscopicStates=2
@@ -31,8 +34,8 @@ Temperature_Values=46 5.0 2.0 1.0 0.8 0.6 0.5 0.4 0.38 0.36 0.34 0.32 0.3 0.28 0
 Temperature=0.00001
 
 Metropolis_Algo=1
-MaxMCsweeps=12000
-Last_n_sweeps_for_measurement=1200
+MaxMCsweeps=100000
+Last_n_sweeps_for_measurement=10000
 Measurement_after_each_m_sweeps=5
 
 Read_Seed_from_file=0

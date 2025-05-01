@@ -11,15 +11,15 @@ int main(){
 
 
 
-    double tx=0.7;
-    double ty=0.7;
+    double tx=0.6;
+    double ty=0.6;
     double tz=1.0;
 
 
     double Delta=-2.0; //Delta X n_{xy}
 
     double U=20.0;
-    double JbyU=0.25;
+    double JbyU=0.10;
     double J;
     J=U*JbyU;
 
@@ -41,7 +41,7 @@ int main(){
     int N; 
 
     //sqrt(8)Xsqrt(8)
-    /*
+   /* 
     N=8;
     Mat_1_int Bonds_Xtype_site1 = {0, 1, 2, 3, 4, 5, 6, 7};
     Mat_1_int Bonds_Xtype_site2 = {6, 7, 1, 0, 2, 3, 5, 4};
@@ -85,7 +85,7 @@ int main(){
 
 
   //8x8 PBCxPBC--------------------------
- 
+
     int Lx=4;
    int Ly=4;
    N=Lx*Ly;
@@ -113,6 +113,7 @@ int main(){
 
    }
    }
+   
   //-----------------------------------------
 
 

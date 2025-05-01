@@ -39,6 +39,13 @@ public:
     void TauZiTauZj_Average(int Confs_used);
     void SiSj_Average(int Confs_used);
 
+    complex<double> GetLocalOprExpAnsatz(string opr_str, int Site, string StateType);
+    double Calculate_TotalE_Ansatz(string StateType);
+    void Run_Ansatz(string StateType);
+
+    void Tag_Sites();
+    void Initialize_O3_Params();
+
 
     bool PTMC; //Parallel Tempering Monte Carlo
     int N_replica_sets;
@@ -63,6 +70,10 @@ public:
     Mat_3_string LocalConnectionOprs;
     Mat_2_doub LocalConnectionValue;
 
+    int theta_O3_ind, phi_O3_ind;
+    Mat_2_doub theta_O3, phi_O3;
+    Mat_1_string SiteTags;
+    Mat_1_doub SiteSpinVal;
     int theta1_ind, theta2_ind, phi1_ind, phi2_ind, phi3_ind;
     int X_, Y_, Z_;
     Mat_2_Complex_doub Dvecs;
@@ -87,6 +98,40 @@ public:
 */
 
 
+void PTMCEngine::Initialize_O3_Params(){
+
+    // Dvecs.resize(ns_);
+    // for(int i=0;i<ns_;i++){
+    //     Dvecs[i].resize(3);
+    // }
+
+    theta_O3_ind=0;
+    phi_O3_ind=1;
+
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
+        for(int i=0;i<ns_;i++){
+            theta_O3[Ti][i] = PI*random1();
+            phi_O3[Ti][i] = 2.0*PI*random1();
+        }
+    }
+
+    // Update_Dvecs();
+
+}
+
+void PTMCEngine::Tag_Sites(){
+
+    SiteTags.resize(ns_);
+    SiteSpinVal.resize(ns_);
+
+    ifstream FileTags(Parameters_.File_SiteTags.c_str());
+    int site_temp;
+    for(int i=0;i<ns_;i++){
+        FileTags>>site_temp>>SiteTags[i]>>SiteSpinVal[i];
+    }
+
+}
+
 
 void PTMCEngine::InitializeEngine(){
 
@@ -105,10 +150,107 @@ void PTMCEngine::InitializeEngine(){
         phi1_[Ti].resize(ns_);phi2_[Ti].resize(ns_);phi3_[Ti].resize(ns_);
     }
 
-    Initialize_MarsagliaParams();
 
+    theta_O3.resize(N_temperature_slices);
+    phi_O3.resize(N_temperature_slices);
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
+        theta_O3[Ti].resize(ns_);
+        phi_O3[Ti].resize(ns_);
+    }
+
+    Tag_Sites();
+    Initialize_MarsagliaParams();
+    Initialize_O3_Params();
 
 }
+
+
+double PTMCEngine::Calculate_TotalE_Ansatz(string StateType){
+
+
+    complex<double> temp_TotalE_=0.0;
+    double TotalE_=0.0;
+
+    for(int FileNo=0;FileNo<Parameters_.ConnectionFiles.size();FileNo++){
+
+        Mat_1_Complex_doub E_array;
+        int Np_=1;
+
+#ifdef _OPENMP
+        Np_= omp_get_max_threads();
+#endif
+
+        E_array.resize(Np_);
+
+#ifdef _OPENMP
+#pragma omp parallel for default(shared)
+#endif
+        for(int connection_no=0;connection_no<Parameters_.Connections[FileNo].size();connection_no++){
+
+            int thread_id=0;
+#ifdef _OPENMP
+            thread_id = omp_get_thread_num();
+#endif
+
+
+            stringstream connection_stream;
+            connection_stream<<Parameters_.Connections[FileNo][connection_no];
+
+            int n_oprs;
+            string temp_opr_str;
+            Mat_1_string oprs_list;
+            Mat_1_int oprs_site;
+            oprs_list.clear();
+            oprs_site.clear();
+
+            double connection_val;
+            connection_stream>>n_oprs;
+            oprs_list.resize(n_oprs);
+            oprs_site.resize(n_oprs);
+
+            for(int opr_no=(n_oprs-1);opr_no>=0;opr_no--){
+                connection_stream>>temp_opr_str;
+                oprs_list[opr_no]=temp_opr_str;
+            }
+            for(int opr_no=(n_oprs-1);opr_no>=0;opr_no--){
+                connection_stream>>oprs_site[opr_no];
+            }
+            connection_stream>>connection_val;
+
+
+            complex<double> E_conn=1.0;
+            for(int opr_no=0;opr_no<oprs_list.size();opr_no++){
+                int opr_site = oprs_site[opr_no];
+                string opr_str = oprs_list[opr_no];
+                E_conn = E_conn*GetLocalOprExpAnsatz(opr_str, opr_site, StateType);
+            }
+            E_conn = E_conn*connection_val;
+
+
+            E_array[thread_id] += E_conn;
+
+        }
+
+        for(int th_id=0;th_id<Np_;th_id++){
+            temp_TotalE_ +=E_array[th_id];
+        }
+
+    }
+
+
+
+    if(temp_TotalE_.imag()>0.000001){
+        cout<<"temp_TotalE_.real() : "<<temp_TotalE_.real()<<endl;
+        cout<<"temp_TotalE_.imag() : "<<temp_TotalE_.imag()<<endl;
+        assert(temp_TotalE_.imag()<0.000001);
+    }
+
+    TotalE_ =  temp_TotalE_.real();
+
+    return TotalE_;
+
+}
+
 
 
 
@@ -198,26 +340,340 @@ double PTMCEngine::Calculate_TotalE(int Ti){
 
 }
 
-complex<double> PTMCEngine::GetLocalOprExp(string opr_str, int opr_site, int Ti){
+
+complex<double> PTMCEngine::GetLocalOprExpAnsatz(string opr_str, int Site, string StateType){
 
     complex<double> value;
 
     double x1, x2, y1, y2, z1, z2;
     complex<double> x_,y_,z_;
-    x1 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(theta1_[Ti][opr_site]) * sin(phi1_[Ti][opr_site]);
-    x2 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(theta1_[Ti][opr_site]) * cos(phi1_[Ti][opr_site]);
 
-    y1 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(1.0 - theta1_[Ti][opr_site]) * sin(phi2_[Ti][opr_site]);
-    y2 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(1.0 - theta1_[Ti][opr_site]) * cos(phi2_[Ti][opr_site]);
+    if(StateType=="AFM_AFQ"){
 
-    z1 = sqrt(1.0 - sqrt(theta2_[Ti][opr_site])) * sin(phi3_[Ti][opr_site]);
-    z2 = sqrt(1.0 - sqrt(theta2_[Ti][opr_site])) * cos(phi3_[Ti][opr_site]);
+        //Assuming square lattice of S and L
+        int sitex, sitey;
+        int lx,ly;
+        lx=int(sqrt(0.5*ns_)+0.5);
+        ly=(ns_/(2*lx));
+
+        if(Site<(ns_/2)){
+            sitex = Site%lx;
+            sitey = Site/lx;
+        }
+        else{
+            sitex = (Site - (ns_/2))%lx;
+            sitey = (Site - (ns_/2))/lx;
+        }
+
+        string SiteType;
+        if(Site<(ns_/2)){
+            SiteType="S_";
+        }
+        else{
+            SiteType="L_";
+        }
+        if((sitex+sitey)%2==0){
+            SiteType +="A";
+        }
+        else{
+            SiteType +="B";
+        }
+
+
+        if(SiteType=="S_A"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="S_B"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=-1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_A"){
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_B"){
+            x1=0.0; x2=0.0;
+            y1=1.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else{
+            cout<<"SiteType not allowed in this Ansatz"<<endl;
+            assert(false);
+        }
+
+    }
+
+
+    if(StateType=="AFM_FQ"){
+
+        //Assuming square lattice of S and L
+        int sitex, sitey;
+        int lx,ly;
+        lx=int(sqrt(0.5*ns_)+0.5);
+        ly=(ns_/(2*lx));
+
+        if(Site<(ns_/2)){
+            sitex = Site%lx;
+            sitey = Site/lx;
+        }
+        else{
+            sitex = (Site - (ns_/2))%lx;
+            sitey = (Site - (ns_/2))/lx;
+        }
+
+        string SiteType;
+        if(Site<(ns_/2)){
+            SiteType="S_";
+        }
+        else{
+            SiteType="L_";
+        }
+        if((sitex+sitey)%2==0){
+            SiteType +="A";
+        }
+        else{
+            SiteType +="B";
+        }
+
+
+        if(SiteType=="S_A"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="S_B"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=-1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_A"){
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_B"){
+            // x1=0.0; x2=0.0;
+            // y1=1.0; y2=0.0;
+            // z1=0.0;z2=0.0;
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else{
+            cout<<"SiteType not allowed in this Ansatz"<<endl;
+            assert(false);
+        }
+
+    }
+
+    if(StateType=="FM_AFQ"){
+
+        //Assuming square lattice of S and L
+        int sitex, sitey;
+        int lx,ly;
+        lx=int(sqrt(0.5*ns_)+0.5);
+        ly=(ns_/(2*lx));
+
+        if(Site<(ns_/2)){
+            sitex = Site%lx;
+            sitey = Site/lx;
+        }
+        else{
+            sitex = (Site - (ns_/2))%lx;
+            sitey = (Site - (ns_/2))/lx;
+        }
+
+        string SiteType;
+        if(Site<(ns_/2)){
+            SiteType="S_";
+        }
+        else{
+            SiteType="L_";
+        }
+        if((sitex+sitey)%2==0){
+            SiteType +="A";
+        }
+        else{
+            SiteType +="B";
+        }
+
+
+        if(SiteType=="S_A"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="S_B"){
+            // x1=1.0/sqrt(2.0); x2=0.0;
+            // y1=0.0; y2=-1.0/sqrt(2.0);
+            // z1=0.0;z2=0.0;
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_A"){
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_B"){
+            x1=0.0; x2=0.0;
+            y1=1.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else{
+            cout<<"SiteType not allowed in this Ansatz"<<endl;
+            assert(false);
+        }
+
+    }
+
+    if(StateType=="FM_FQ"){
+
+        //Assuming square lattice of S and L
+        int sitex, sitey;
+        int lx,ly;
+        lx=int(sqrt(0.5*ns_)+0.5);
+        ly=(ns_/(2*lx));
+
+        if(Site<(ns_/2)){
+            sitex = Site%lx;
+            sitey = Site/lx;
+        }
+        else{
+            sitex = (Site - (ns_/2))%lx;
+            sitey = (Site - (ns_/2))/lx;
+        }
+
+        string SiteType;
+        if(Site<(ns_/2)){
+            SiteType="S_";
+        }
+        else{
+            SiteType="L_";
+        }
+        if((sitex+sitey)%2==0){
+            SiteType +="A";
+        }
+        else{
+            SiteType +="B";
+        }
+
+
+        if(SiteType=="S_A"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="S_B"){
+            // x1=1.0/sqrt(2.0); x2=0.0;
+            // y1=0.0; y2=-1.0/sqrt(2.0);
+            // z1=0.0;z2=0.0;
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_A"){
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_B"){
+            // x1=0.0; x2=0.0;
+            // y1=1.0; y2=0.0;
+            // z1=0.0;z2=0.0;
+            x1=1.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else{
+            cout<<"SiteType not allowed in this Ansatz"<<endl;
+            assert(false);
+        }
+
+    }
+
+    if(StateType=="FM_AFQ_pZmXY"){
+
+        //Assuming square lattice of S and L
+        int sitex, sitey;
+        int lx,ly;
+        lx=int(sqrt(0.5*ns_)+0.5);
+        ly=(ns_/(2*lx));
+
+        if(Site<(ns_/2)){
+            sitex = Site%lx;
+            sitey = Site/lx;
+        }
+        else{
+            sitex = (Site - (ns_/2))%lx;
+            sitey = (Site - (ns_/2))/lx;
+        }
+
+        string SiteType;
+        if(Site<(ns_/2)){
+            SiteType="S_";
+        }
+        else{
+            SiteType="L_";
+        }
+        if((sitex+sitey)%2==0){
+            SiteType +="A";
+        }
+        else{
+            SiteType +="B";
+        }
+
+
+        if(SiteType=="S_A"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="S_B"){
+            // x1=1.0/sqrt(2.0); x2=0.0;
+            // y1=0.0; y2=-1.0/sqrt(2.0);
+            // z1=0.0;z2=0.0;
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=0.0; y2=1.0/sqrt(2.0);
+            z1=0.0;z2=0.0;
+        }
+        else if(SiteType=="L_A"){
+            x1=0.0; x2=0.0;
+            y1=0.0; y2=0.0;
+            z1=1.0;z2=0.0;
+        }
+        else if(SiteType=="L_B"){
+            x1=1.0/sqrt(2.0); x2=0.0;
+            y1=1.0/sqrt(2.0); y2=0.0;
+            z1=0.0;z2=0.0;
+        }
+        else{
+            cout<<"SiteType not allowed in this Ansatz"<<endl;
+            assert(false);
+        }
+
+    }
+
 
 
     x_=complex<double>(x1,x2);
     y_=complex<double>(y1,y2);
     z_=complex<double>(z1,z2);
 
+    if(opr_str == "d1"){
+        value = x_;
+    }
+    if(opr_str == "d2"){
+        value = y_;
+    }
+    if(opr_str == "d3"){
+        value = z_;
+    }
     if(opr_str == "Sz"){
         value = iota_complex*( x_*conj(y_) - y_*conj(x_) );
     }
@@ -255,6 +711,122 @@ complex<double> PTMCEngine::GetLocalOprExp(string opr_str, int opr_site, int Ti)
         value = -1.0*(conj(x_)*z_ + conj(z_)*x_);
     }
 
+
+    return value;
+
+}
+
+
+
+
+complex<double> PTMCEngine::GetLocalOprExp(string opr_str, int opr_site, int Ti){
+
+    complex<double> value;
+
+
+    if(SiteTags[opr_site]=="CP2"){
+
+        double x1, x2, y1, y2, z1, z2;
+        complex<double> x_,y_,z_;
+        x1 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(theta1_[Ti][opr_site]) * sin(phi1_[Ti][opr_site]);
+        x2 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(theta1_[Ti][opr_site]) * cos(phi1_[Ti][opr_site]);
+
+        y1 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(1.0 - theta1_[Ti][opr_site]) * sin(phi2_[Ti][opr_site]);
+        y2 = sqrt(sqrt(theta2_[Ti][opr_site])) * sqrt(1.0 - theta1_[Ti][opr_site]) * cos(phi2_[Ti][opr_site]);
+
+        z1 = sqrt(1.0 - sqrt(theta2_[Ti][opr_site])) * sin(phi3_[Ti][opr_site]);
+        z2 = sqrt(1.0 - sqrt(theta2_[Ti][opr_site])) * cos(phi3_[Ti][opr_site]);
+
+
+        x_=complex<double>(x1,x2);
+        y_=complex<double>(y1,y2);
+        z_=complex<double>(z1,z2);
+
+        if(opr_str == "d1"){
+            value = x_;
+        }
+        if(opr_str == "d2"){
+            value = y_;
+        }
+        if(opr_str == "d3"){
+            value = z_;
+        }
+        if(opr_str == "Sz"){
+            value = iota_complex*( x_*conj(y_) - y_*conj(x_) );
+        }
+        if(opr_str == "Sx"){
+            value = iota_complex*( y_*conj(z_) - z_*conj(y_) );
+        }
+        if(opr_str == "Sy"){
+            value = iota_complex*( z_*conj(x_) - x_*conj(z_) );
+        }
+        if(opr_str == "Sp"){
+            value = iota_complex*( y_*conj(z_) - z_*conj(y_) ) - 1.0*( z_*conj(x_) - x_*conj(z_) );
+        }
+        if(opr_str == "Sm"){
+            value = iota_complex*( y_*conj(z_) - z_*conj(y_) ) + 1.0*( z_*conj(x_) - x_*conj(z_) );
+        }
+        if(opr_str == "iSy"){
+            value = -1.0*( z_*conj(x_) - x_*conj(z_) );
+        }
+        if(opr_str == "Sz2"){
+            value = 1.0 - abs(z_)*abs(z_);
+        }
+        if(opr_str == "Sx2"){
+            value = 1.0 - abs(x_)*abs(x_);
+        }
+        if(opr_str == "Sy2"){
+            value = 1.0 - abs(y_)*abs(y_);
+        }
+        if(opr_str == "Qyz"){
+            value = -1.0*(conj(y_)*z_ + conj(z_)*y_);
+        }
+        if(opr_str == "iQyz"){
+            value = -1.0*iota_complex*(conj(y_)*z_ + conj(z_)*y_);
+        }
+        if(opr_str == "Qxz"){
+            value = -1.0*(conj(x_)*z_ + conj(z_)*x_);
+        }
+
+
+    }
+    else if(SiteTags[opr_site]=="O3"){
+
+        if(opr_str == "Sz"){
+            value = SiteSpinVal[opr_site]*cos(theta_O3[Ti][opr_site]);
+        }
+        else if(opr_str == "Sx"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*cos(phi_O3[Ti][opr_site]);
+        }
+        else if(opr_str == "Sy"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*sin(phi_O3[Ti][opr_site]);
+        }
+        else if(opr_str == "Sp"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*exp(iota_complex*(phi_O3[Ti][opr_site]));
+        }
+        else if(opr_str == "Sm"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*exp(-1.0*iota_complex*(phi_O3[Ti][opr_site]));
+        }
+        else if(opr_str == "Sx2"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*cos(phi_O3[Ti][opr_site])*
+                    SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*cos(phi_O3[Ti][opr_site]);
+        }
+        else if(opr_str == "Sy2"){
+            value = SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*sin(phi_O3[Ti][opr_site])*
+                    SiteSpinVal[opr_site]*sin(theta_O3[Ti][opr_site])*sin(phi_O3[Ti][opr_site]);
+        }
+        else if(opr_str == "Sz2"){
+            value = SiteSpinVal[opr_site]*cos(theta_O3[Ti][opr_site])*SiteSpinVal[opr_site]*cos(theta_O3[Ti][opr_site]);
+        }
+        else{
+            cout<<"Only Sz, Sx, Sy, Sp, Sm, Sx2, Sy2, Sz2 oprs allowed in O3 MonteCarlo"<<endl;
+            assert(false);
+        }
+
+    }
+    else{
+        assert(false);
+    }
 
     return value;
 
@@ -353,7 +925,8 @@ void PTMCEngine::Initialize_MarsagliaParams(){
             theta2_[Ti][i] = random1();
             phi1_[Ti][i] = 2.0*PI*random1();
             phi2_[Ti][i] = 2.0*PI*random1();
-            phi3_[Ti][i] = 2.0*PI*random1();
+            //phi3_[Ti][i] = 2.0*PI*random1();
+            phi3_[Ti][i] = 0.5*PI;
         }
     }
 
@@ -429,35 +1002,60 @@ void PTMCEngine::FieldThrow(int site, int Ti)
 */
 
 
-    theta1_[Ti][site] += WindowSize*( random1() -0.5 );
-    theta2_[Ti][site] += WindowSize*( random1() -0.5 );
-    phi1_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
-    phi2_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
-    phi3_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
+    if(SiteTags[site]=="CP2"){
+        theta1_[Ti][site] += WindowSize*( random1() -0.5 );
+        theta2_[Ti][site] += WindowSize*( random1() -0.5 );
+        phi1_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
+        phi2_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
+        //phi3_[Ti][site] += 2.0*PI*WindowSize*( random1() -0.5 );
+        phi3_[Ti][site] = 0.5*PI;
+
+        // theta1_[site] += 2.0*(random1()-0.5);
+        // theta2_[site] += 2.0*(random1()-0.5);
+        // phi1_[site] += 2.0*PI*2.0*(random1()-0.5);
+        // phi2_[site] += 2.0*PI*2.0*(random1()-0.5);
+        // phi3_[site] += 2.0*PI*2.0*(random1()-0.5);
 
 
-    // theta1_[site] += 2.0*(random1()-0.5);
-    // theta2_[site] += 2.0*(random1()-0.5);
-    // phi1_[site] += 2.0*PI*2.0*(random1()-0.5);
-    // phi2_[site] += 2.0*PI*2.0*(random1()-0.5);
-    // phi3_[site] += 2.0*PI*2.0*(random1()-0.5);
+        if (phi1_[Ti][site] < 0.0){phi1_[Ti][site] = 2.0 * PI + phi1_[Ti][site];}
+        phi1_[Ti][site] = fmod(phi1_[Ti][site], 2.0 * PI);
+
+        if (phi2_[Ti][site] < 0.0){phi2_[Ti][site] =  2.0 * PI + phi2_[Ti][site];}
+        phi2_[Ti][site] = fmod(phi2_[Ti][site], 2.0 * PI);
+
+        if (phi3_[Ti][site] < 0.0){phi3_[Ti][site] =  2.0 * PI + phi3_[Ti][site];}
+        phi3_[Ti][site] = fmod(phi3_[Ti][site], 2.0 * PI);
 
 
-    if (phi1_[Ti][site] < 0.0){phi1_[Ti][site] = 2.0 * PI + phi1_[Ti][site];}
-    phi1_[Ti][site] = fmod(phi1_[Ti][site], 2.0 * PI);
+        if (theta1_[Ti][site] < 0.0){theta1_[Ti][site] =  1.0 + theta1_[Ti][site];}
+        theta1_[Ti][site] = fmod(theta1_[Ti][site], 1.0);
 
-    if (phi2_[Ti][site] < 0.0){phi2_[Ti][site] =  2.0 * PI + phi2_[Ti][site];}
-    phi2_[Ti][site] = fmod(phi2_[Ti][site], 2.0 * PI);
+        if (theta2_[Ti][site] < 0.0){theta2_[Ti][site] =  1.0 + theta2_[Ti][site];}
+        theta2_[Ti][site] = fmod(theta2_[Ti][site], 1.0);
+    }
+    else if(SiteTags[site]=="O3"){
 
-    if (phi3_[Ti][site] < 0.0){phi3_[Ti][site] =  2.0 * PI + phi3_[Ti][site];}
-    phi3_[Ti][site] = fmod(phi3_[Ti][site], 2.0 * PI);
+        phi_O3[Ti][site] += 2 * PI * (random1() - 0.5) * WindowSize;
+        if( phi_O3[Ti][site] < 0.0) {phi_O3[Ti][site] += 2.0*PI; }
+        if( phi_O3[Ti][site] >=2.0*PI) {phi_O3[Ti][site] -= 2.0*PI;}
 
 
-    if (theta1_[Ti][site] < 0.0){theta1_[Ti][site] =  1.0 + theta1_[Ti][site];}
-    theta1_[Ti][site] = fmod(theta1_[Ti][site], 1.0);
+        theta_O3[Ti][site] += PI * (random1() - 0.5) * WindowSize;
+        if ( theta_O3[Ti][site] < 0.0 ) {
+            theta_O3[Ti][site] = -1.0*theta_O3[Ti][site];
+            phi_O3[Ti][site] = fmod( phi_O3[Ti][site]+PI, 2.0*PI );
+        }
+        if ( theta_O3[Ti][site] > PI ) {
+            theta_O3[Ti][site] = 2.0*PI - theta_O3[Ti][site];
+            phi_O3[Ti][site] = fmod( phi_O3[Ti][site] + PI, 2.0*PI );
+        }
 
-    if (theta2_[Ti][site] < 0.0){theta2_[Ti][site] =  1.0 + theta2_[Ti][site];}
-    theta2_[Ti][site] = fmod(theta2_[Ti][site], 1.0);
+    }
+    else{
+        cout<<"SiteTag is not correct"<<endl;
+        assert(false);
+    }
+
 
 
 } // ----------
@@ -549,6 +1147,30 @@ void PTMCEngine::TotalE_Average(int Replica_no, int Confs_used){
 
 }
 
+void PTMCEngine::Run_Ansatz(string StateType){
+
+
+    cout<<"Energy "<<StateType<<" = "<<Calculate_TotalE_Ansatz(StateType)<<endl;
+
+
+    string ObsOutFile_str="MicrostateLocalObs_Ansatz_"+StateType+".txt";
+    ofstream ObsOutFile(ObsOutFile_str.c_str());
+    ObsOutFile<<"#site Sx Sy Sz Sx2 Sy2 Sz2  d1  d2  d3"<<endl;
+    for(int site=0;site<ns_;site++){
+        ObsOutFile<<site<<setw(15)<<GetLocalOprExpAnsatz("Sx", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sx", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("Sy", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sy", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("Sz", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sz", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("Sx2", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sx2", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("Sy2", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sy2", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("Sz2", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("Sz2", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("d1", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("d1", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("d2", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("d2", site, StateType).imag()<<setw(15)
+        <<GetLocalOprExpAnsatz("d3", site, StateType).real()<<setw(15)<<GetLocalOprExpAnsatz("d3", site, StateType).imag()
+        <<endl;
+    }
+
+}
+
 void PTMCEngine::RUN_MC()
 {
 
@@ -629,11 +1251,21 @@ void PTMCEngine::RUN_MC()
 
                     LocalPrevE = Get_Local_Energy(i, Ti);
 
-                    saved_Params[theta1_ind] = theta1_[Ti][i];
-                    saved_Params[theta2_ind] = theta2_[Ti][i];
-                    saved_Params[phi1_ind] = phi1_[Ti][i];
-                    saved_Params[phi2_ind] = phi2_[Ti][i];
-                    saved_Params[phi3_ind] = phi3_[Ti][i];
+                    if(SiteTags[i]=="CP2"){
+                        saved_Params[theta1_ind] = theta1_[Ti][i];
+                        saved_Params[theta2_ind] = theta2_[Ti][i];
+                        saved_Params[phi1_ind] = phi1_[Ti][i];
+                        saved_Params[phi2_ind] = phi2_[Ti][i];
+                        saved_Params[phi3_ind] = phi3_[Ti][i];
+                    }
+                    else if(SiteTags[i]=="O3"){
+                        saved_Params[theta_O3_ind] = theta_O3[Ti][i];
+                        saved_Params[phi_O3_ind] = phi_O3[Ti][i];
+                    }
+                    else{
+                        cout<<"SiteTag Not correct"<<endl;
+                        assert(false);
+                    }
 
                     FieldThrow(i, Ti);
 
@@ -643,6 +1275,9 @@ void PTMCEngine::RUN_MC()
 
                     P12 = beta * ((LocalPrevE) - (LocalCurrE));
 
+                    if(SiteTags[i]=="O3"){
+                    P12 += log((sin(theta_O3[Ti][i]) / sin(saved_Params[theta_O3_ind])));
+                    }
                     //Heat bath algorithm [See page-129 of Prof. Elbio's Book]
                     //Heat bath algorithm works for small changes i.e. when P~1.0
                     //  if (Heat_Bath_Algo){
@@ -677,11 +1312,17 @@ void PTMCEngine::RUN_MC()
                     else
                     {
                         //AccCount[1] +=1;
-                        theta1_[Ti][i] = saved_Params[theta1_ind];
-                        theta2_[Ti][i] = saved_Params[theta2_ind];
-                        phi1_[Ti][i] = saved_Params[phi1_ind];
-                        phi2_[Ti][i] = saved_Params[phi2_ind];
-                        phi3_[Ti][i] = saved_Params[phi3_ind];
+                        if(SiteTags[i]=="CP2"){
+                            theta1_[Ti][i] = saved_Params[theta1_ind];
+                            theta2_[Ti][i] = saved_Params[theta2_ind];
+                            phi1_[Ti][i] = saved_Params[phi1_ind];
+                            phi2_[Ti][i] = saved_Params[phi2_ind];
+                            phi3_[Ti][i] = saved_Params[phi3_ind];
+                        }
+                        if(SiteTags[i]=="O3"){
+                            theta_O3[Ti][i] = saved_Params[theta_O3_ind];
+                            phi_O3[Ti][i] = saved_Params[phi_O3_ind];
+                        }
                     }
 
                 } // site loop
@@ -763,8 +1404,8 @@ void PTMCEngine::RUN_MC()
                     Confs_used = Confs_used + 1;
 
                     Calculate_SiSj(Replica_Permutation[0]);
-                    Calculate_TauZiTauZj(Replica_Permutation[0]);
                     SiSj_Average(Confs_used);
+                    Calculate_TauZiTauZj(Replica_Permutation[0]);
                     TauZiTauZj_Average(Confs_used);
 
                     TotalE_Average(Replica_Permutation[0] , Confs_used);
@@ -859,6 +1500,36 @@ void PTMCEngine::RUN_MC()
         for(int ti=0;ti<N_temperature_slices-1;ti++){
             cout<<"No of swaps "<<ti<<" "<< No_of_swaps[ti]<<endl;
         }
+
+
+        int Ti_temp = Replica_Permutation[0];
+        char temp_char2[50];
+        sprintf(temp_char2, "%.10f", TemperatureReplicaSets[temp_set][Ti_temp]);
+        string ObsOutFile_str="MicrostateLocalObs_TemperatureSet"+ to_string(temp_set)+ "TemperatureValue"+ string(temp_char) +".txt";
+        ofstream ObsOutFile(ObsOutFile_str.c_str());
+        ObsOutFile<<"#site Sx Sy Sz Sx2 Sy2 Sz2  d1  d2  d3"<<endl;
+        for(int site=0;site<ns_;site++){
+            ObsOutFile<<site<<setw(15)<<GetLocalOprExp("Sx", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sx", site, Ti_temp).imag()<<setw(15)
+            <<GetLocalOprExp("Sy", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sy", site, Ti_temp).imag()<<setw(15)
+            <<GetLocalOprExp("Sz", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sz", site, Ti_temp).imag()<<setw(15)
+            <<GetLocalOprExp("Sx2", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sx2", site, Ti_temp).imag()<<setw(15)
+            <<GetLocalOprExp("Sy2", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sy2", site, Ti_temp).imag()<<setw(15)
+            <<GetLocalOprExp("Sz2", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("Sz2", site, Ti_temp).imag();
+
+            if(SiteTags[site]=="CP2"){
+                ObsOutFile<<setw(15)
+                <<GetLocalOprExp("d1", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("d1", site, Ti_temp).imag()<<setw(15)
+                <<GetLocalOprExp("d2", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("d2", site, Ti_temp).imag()<<setw(15)
+                <<GetLocalOprExp("d3", site, Ti_temp).real()<<setw(15)<<GetLocalOprExp("d3", site, Ti_temp).imag();
+            }
+
+            ObsOutFile<<endl;
+        }
+
+
+
+
+
 
     } //Temperature Set
 

@@ -50,6 +50,8 @@ NoOfMicroscopicStates=50
     double WindowSize, AccCount[2];
     char Dflag;
 
+    string File_SiteTags;
+
     void Initialize(string inputfile_);
     double matchstring(string file, string match);
     string matchstring2(string file, string match);
@@ -223,6 +225,8 @@ void Parameters::Initialize(string inputfile_)
     Measurement_after_each_m_sweeps = int(matchstring(inputfile_, "Measurement_after_each_m_sweeps"));
 
 
+
+    File_SiteTags = matchstring2(inputfile_, "File_SiteTags");
 
     genericconnectionsfiles_ = matchstring2(inputfile_, "GenericConnectionsFiles");
     stringstream genericconnectionsfiles_stream;

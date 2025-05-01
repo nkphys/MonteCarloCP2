@@ -23,6 +23,7 @@ public:
 
 
     void Initialize_MarsagliaParams();
+
    // void Update_Dvecs();
     double random1();
     void Create_Connections_wrt_site();
@@ -43,6 +44,8 @@ public:
 
 
     void InitializeEngine();
+    void Tag_Sites();
+    void Initialize_O3_Params();
 
 
     bool PTMC; //Parallel Tempering Monte Carlo
@@ -69,6 +72,10 @@ public:
     int X_, Y_, Z_;
     Mat_2_Complex_doub Dvecs;
     Mat_2_doub theta1_, theta2_, phi1_, phi2_, phi3_;
+    Mat_2_doub theta_O3, phi_O3;
+
+    Mat_1_string SiteTags;
+
     Parameters &Parameters_;
     mt19937_64 &Generator1_; //for random fields
     const int ns_;
@@ -88,6 +95,18 @@ public:
  *  ***********
 */
 
+void MCEngine::Tag_Sites(){
+
+    SiteTags.resize(ns_);
+
+    ifstream FileTags(Parameters_.File_SiteTags.c_str());
+    int site_temp;
+    for(int i=0;i<ns_;i++){
+        FileTags>>site_temp>>SiteTags[i];
+    }
+
+}
+
 void MCEngine::InitializeEngine(){
 
     PTMC=Parameters_.PTMC;
@@ -100,10 +119,18 @@ void MCEngine::InitializeEngine(){
     theta1_.resize(N_temperature_slices);theta2_.resize(N_temperature_slices);
     phi1_.resize(N_temperature_slices);phi2_.resize(N_temperature_slices);phi3_.resize(N_temperature_slices);
 
+
+    theta_O3.resize(N_temperature_slices);
+    phi_O3.resize(N_temperature_slices);
+
     for(int Ti=0;Ti<N_temperature_slices;Ti++){
     theta1_[Ti].resize(ns_);theta2_[Ti].resize(ns_);
     phi1_[Ti].resize(ns_);phi2_[Ti].resize(ns_);phi3_[Ti].resize(ns_);
+
+    theta_O3[Ti].resize(ns_);phi_O3[Ti].resize(ns_);
     }
+
+    //Tag_Sites();
 
     Initialize_MarsagliaParams();
 
@@ -348,6 +375,26 @@ void MCEngine::Initialize_MarsagliaParams(){
     }
 
    // Update_Dvecs();
+
+}
+
+
+void MCEngine::Initialize_O3_Params(){
+
+    // Dvecs.resize(ns_);
+    // for(int i=0;i<ns_;i++){
+    //     Dvecs[i].resize(3);
+    // }
+
+
+    for(int Ti=0;Ti<N_temperature_slices;Ti++){
+        for(int i=0;i<ns_;i++){
+            theta_O3[Ti][i] = PI*random1();
+            phi_O3[Ti][i] = 2.0*PI*random1();
+        }
+    }
+
+    // Update_Dvecs();
 
 }
 

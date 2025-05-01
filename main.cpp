@@ -85,6 +85,21 @@ int main(int argc, char *argv[]) {
 
     }
 
+    else if (ex_string=="tz"){
+
+        cout<<setprecision(9);
+        PTMCEngine MCEngine_(Parameters_, Generator_);
+
+        //assert(false);
+
+        MCEngine_.Create_Connections_wrt_site();
+        MCEngine_.InitializeEngine();
+        MCEngine_.Run_Ansatz("AFM_FQ");
+        MCEngine_.Run_Ansatz("AFM_AFQ");
+        MCEngine_.Run_Ansatz("FM_AFQ");
+        MCEngine_.Run_Ansatz("FM_FQ");
+        MCEngine_.Run_Ansatz("FM_AFQ_pZmXY");
+    }
 
     else {
         cout <<"Executable not present"<<endl;

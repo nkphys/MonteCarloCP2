@@ -35,8 +35,7 @@ STRIP_COMMAND = true #### Keeps lines in the executable for debugging
 $(EXENAME): clean main.o 
 	$(CXX) $(CPPFLAGS) -o $(EXENAME)  main.o $(LDFLAGS) 
 	$(STRIP_COMMAND) $(EXENAME)
-
-#cp sf NI
+	cp MC_CP2 EnergyAnsatz
 #cp sf observe
 
 all: $(EXENAME)
